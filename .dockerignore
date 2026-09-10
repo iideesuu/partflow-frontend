@@ -1,0 +1,29 @@
+﻿node_modules
+dist
+.git
+.gitignore
+Dockerfile*
+docker-compose*.yml
+*.src
+*.enc
+*.encrypted
+*.obf
+**/*.src
+**/*.enc
+**/*.encrypted
+**/*.obf
+# Protected build configuration; provide a plain container-safe config below.
+vite.config.js
+index.html
+# API client is container-safe and is required by the runtime build.
+# encrypted source directories (never send to Docker build context)
+.encrypted/
+encrypted/
+protected/
+secrets/
+.env
+.env.*
+!.env.example
+
+vite.config.js
+index.html

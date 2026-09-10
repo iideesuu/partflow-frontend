@@ -1,0 +1,63 @@
+﻿name: partflow-frontend-lab
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: partflow-frontend:lab
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Same-origin API; nginx proxies /api/ to the DRF container over HTTP.
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+      VITE_APP_ENV: ${VITE_APP_ENV:-lab}
+      VITE_STORAGE_STAGE: ${VITE_STORAGE_STAGE:-quarantine,draft,release}
+      VITE_MINIO_CONSOLE_URL: ${VITE_MINIO_CONSOLE_URL:-http://10.1.58.6:9001}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - plm_net
+
+  # Explicit profile: creates/validates shared lab buckets only when requested.
+  # docker compose --profile storage-init run --rm minio-init
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    profiles: ["storage-init"]
+    environment:
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://10.1.58.6:9000}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio@2026}
+      MINIO_BUCKET_QUARANTINE: ${MINIO_BUCKET_QUARANTINE:-plm-quarantine-lab}
+      MINIO_BUCKET_DRAFT: ${MINIO_BUCKET_DRAFT:-plm-draft-lab}
+      MINIO_BUCKET_RELEASE: ${MINIO_BUCKET_RELEASE:-plm-release-lab}
+      MINIO_BUCKET_EXPORT: ${MINIO_BUCKET_EXPORT:-plm-export-lab}
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        mc alias set lab "$${MINIO_ENDPOINT}" "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        for bucket in "$${MINIO_BUCKET_QUARANTINE}" "$${MINIO_BUCKET_DRAFT}" "$${MINIO_BUCKET_RELEASE}" "$${MINIO_BUCKET_EXPORT}"; do
+          case "$${bucket}" in
+            *-lab) ;;
+            *) echo "Refusing non-lab bucket: $${bucket}" >&2; exit 1 ;;
+          esac
+          mc mb --ignore-existing "lab/$${bucket}"
+        done
+        mc ls lab
+
+networks:
+  plm_net:
+    # Must match the backend's PARTFLOW_NETWORK value.  The default preserves
+    # the single-lab setup; use a unique name for parallel checkouts.
+    name: ${PARTFLOW_NETWORK:-partflow_net}
+    external: true
+
+
+
+
