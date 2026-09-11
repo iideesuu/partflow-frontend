@@ -31,7 +31,7 @@ services:
     image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     profiles: ["storage-init"]
     environment:
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MINIO_S3_CONTROL_ENDPOINT: ${MINIO_S3_CONTROL_ENDPOINT:-}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
       MINIO_BUCKET_QUARANTINE: ${MINIO_BUCKET_QUARANTINE:-plm-quarantine}
@@ -41,7 +41,7 @@ services:
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
-        mc alias set lab "$${MINIO_ENDPOINT}" "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc alias set lab "$${MINIO_S3_CONTROL_ENDPOINT}" "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
         for bucket in "$${MINIO_BUCKET_QUARANTINE}" "$${MINIO_BUCKET_DRAFT}" "$${MINIO_BUCKET_RELEASE}" "$${MINIO_BUCKET_EXPORT}"; do
           case "$${bucket}" in
             *-lab) ;;
