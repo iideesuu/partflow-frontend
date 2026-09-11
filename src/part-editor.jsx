@@ -1,0 +1,312 @@
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {apiRequest, endpoints} from './api.js';
+import {ErrorBox, Field, PageHead, list} from './ui.jsx';
+
+const KINDS = [
+  ['standard', '标准件'], ['assembly', '装配件'],
+  ['manufactured', '自制件'], ['raw', '原材料'], ['purchased', '外购件'],
+];
+const LIFECYCLES = [
+  ['active', '活动'], ['development', '开发中'],
+  ['frozen', '冻结'], ['obsolete', '废止'],
+];
+
+export function emptyRevision() {
+  return {
+    revision: 'A', name: '', kind: 'standard', business_lifecycle: 'active',
+    unit: '', standard_code: '', material: '', manufacturer: '',
+    manufacturer_part_number: '', is_customized: false, rohs_standard: '',
+    description: '', parameters: {}, parametersText: '{}',
+  };
+}
+
+export function revisionBody(form) {
+  let parameters;
+  try {
+    parameters = typeof form.parametersText === 'string'
+      ? JSON.parse(form.parametersText.trim() || '{}')
+      : (form.parameters || {});
+  } catch {
+    throw new Error('技术参数格式有误，请输入有效的 JSON 对象。');
+  }
+  if (!parameters || Array.isArray(parameters) || typeof parameters !== 'object') {
+    throw new Error('技术参数必须为键值对象，例如 {"电压": "24V"}。');
+  }
+  const name = String(form.name || '').trim();
+  const revision = String(form.revision || '').trim();
+  if (!name) throw new Error('请填写零件名称。');
+  if (!form.unit) throw new Error('请选择计量单位。');
+  if (!revision || revision.length > 8) throw new Error('版本编码不能为空且不能超过 8 个字符。');
+  return {
+    revision, name, kind: form.kind || 'standard',
+    business_lifecycle: form.business_lifecycle || 'active', unit: form.unit,
+    standard_code: String(form.standard_code || '').trim(),
+    material: String(form.material || '').trim(),
+    manufacturer: String(form.manufacturer || '').trim(),
+    manufacturer_part_number: String(form.manufacturer_part_number || '').trim(),
+    is_customized: form.is_customized === true || form.is_customized === 'true',
+    rohs_standard: String(form.rohs_standard || '').trim(),
+    description: String(form.description || '').trim(), parameters,
+  };
+}
+
+function Options({items, value}) {
+  return <>
+    {value && !items.some(([key]) => key === value) && <option value={value}>{value}</option>}
+    {items.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+  </>;
+}
+
+// onChange receives the complete next form. parametersText remains editable
+// while incomplete; revisionBody validates it only when the user saves.
+export function RevisionFields({form, onChange, units = [], disabled = false, includeRevision = true}) {
+  const set = (key, value) => onChange({...form, [key]: value});
+  const text = form.parametersText ?? JSON.stringify(form.parameters || {}, null, 2);
+  return <div className="form-grid">
+    <Field label="零件名称 *" wide>
+      <input required maxLength={200} disabled={disabled} value={form.name || ''}
+        onChange={event => set('name', event.target.value)} />
+    </Field>
+    {includeRevision && <Field label="版本编码 *">
+      <input required maxLength={8} disabled={disabled} value={form.revision || ''}
+        onChange={event => set('revision', event.target.value)} />
+    </Field>}
+    <Field label="生命周期">
+      <select disabled={disabled} value={form.business_lifecycle || 'active'}
+        onChange={event => set('business_lifecycle', event.target.value)}>
+        <Options items={LIFECYCLES} value={form.business_lifecycle} />
+      </select>
+    </Field>
+    <Field label="零件类型">
+      <select disabled={disabled} value={form.kind || 'standard'}
+        onChange={event => set('kind', event.target.value)}>
+        <Options items={KINDS} value={form.kind} />
+      </select>
+    </Field>
+    <Field label="计量单位 *">
+      <select required disabled={disabled} value={form.unit || ''}
+        onChange={event => set('unit', event.target.value)}>
+        <option value="">请选择单位</option>
+        {form.unit && !units.some(unit => String(unit.id) === String(form.unit)) &&
+          <option value={form.unit}>{form.unit_code || '当前单位'}</option>}
+        {units.map(unit => <option key={unit.id} value={unit.id}>{unit.code} · {unit.name}</option>)}
+      </select>
+    </Field>
+    <Field label="标准号">
+      <input maxLength={64} disabled={disabled} value={form.standard_code || ''}
+        onChange={event => set('standard_code', event.target.value)} />
+    </Field>
+    <Field label="材料">
+      <input maxLength={128} disabled={disabled} value={form.material || ''}
+        onChange={event => set('material', event.target.value)} />
+    </Field>
+    <Field label="制造商">
+      <input maxLength={128} disabled={disabled} value={form.manufacturer || ''}
+        onChange={event => set('manufacturer', event.target.value)} />
+    </Field>
+    <Field label="制造商料号">
+      <input maxLength={128} disabled={disabled} value={form.manufacturer_part_number || ''}
+        onChange={event => set('manufacturer_part_number', event.target.value)} />
+    </Field>
+    <Field label="是否定制">
+      <select disabled={disabled} value={String(form.is_customized === true || form.is_customized === 'true')}
+        onChange={event => set('is_customized', event.target.value === 'true')}>
+        <option value="false">否</option><option value="true">是</option>
+      </select>
+    </Field>
+    <Field label="RoHS 标准">
+      <input maxLength={128} disabled={disabled} value={form.rohs_standard || ''}
+        onChange={event => set('rohs_standard', event.target.value)} />
+    </Field>
+    <Field label="技术参数（JSON 对象）" wide>
+      <textarea rows={5} spellCheck={false} className="mono" disabled={disabled} value={text}
+        onChange={event => set('parametersText', event.target.value)} />
+      <small className="muted">参数随版本保存，可填写规格、尺寸、电气性能等键值信息。</small>
+    </Field>
+    <Field label="描述与工程说明" wide>
+      <textarea rows={4} disabled={disabled} value={form.description || ''}
+        onChange={event => set('description', event.target.value)} />
+    </Field>
+  </div>;
+}
+
+function errorText(error) {
+  if (!error.details || error.details.detail || error.details.message) return error.message;
+  const fields = {
+    part_code: '物料号', category_id: '零件分类', number_request: '取号记录',
+    initial_revision: '初始版本', name: '名称', unit: '单位', revision: '版本编码',
+  };
+  return Object.entries(error.details).map(([key, value]) =>
+    `${fields[key] || key}：${typeof value === 'string' ? value : JSON.stringify(value)}`
+  ).join('；') || error.message;
+}
+
+export function NewPartPage({navigate, user, openPart}) {
+  const [categories, setCategories] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [major, setMajor] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [numberMode, setNumberMode] = useState('automatic');
+  const [serial, setSerial] = useState('');
+  const [reservations, setReservations] = useState({});
+  const [form, setForm] = useState(emptyRevision);
+  const [loading, setLoading] = useState(true);
+  const [reserving, setReserving] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [created, setCreated] = useState(null);
+  const [retry, setRetry] = useState(0);
+  const operationKeys = useRef({});
+  const saveKey = useRef(crypto.randomUUID());
+  const role = user?.role || user?.user?.role || 'viewer';
+  const canEdit = ['admin', 'engineer'].includes(role);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError('');
+    Promise.all([apiRequest(endpoints.categories), apiRequest(endpoints.units)])
+      .then(([cats, unitData]) => {
+        if (alive) { setCategories(list(cats)); setUnits(list(unitData)); }
+      })
+      .catch(problem => alive && setError(errorText(problem)))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [retry]);
+
+  const selectable = useMemo(() => categories.filter(category =>
+    category.is_enabled !== false && category.is_leaf !== false &&
+    category.is_selectable !== false && category.minor_code !== '00'), [categories]);
+  const majors = useMemo(() => [...new Map(selectable.map(category => [
+    category.major_code,
+    {code: category.major_code, name: category.major_name || category.parent_name ||
+      categories.find(parent => parent.major_code === category.major_code && parent.minor_code === '00')?.name || '未命名大类'},
+  ])).values()], [selectable, categories]);
+  const minors = selectable.filter(category => category.major_code === major);
+  const category = minors.find(item => String(item.id) === categoryId);
+  const reserved = reservations[categoryId];
+  const partCode = numberMode === 'automatic'
+    ? (reserved?.part_code || '')
+    : `${category?.major_code || '__'}${category?.minor_code || '__'}-${serial || '_____'}`;
+  const ready = category && (numberMode === 'automatic'
+    ? Boolean(reserved?.id) : /^[0-9]{5}$/.test(serial) && serial !== '00000');
+
+  async function reserveNumber() {
+    if (!category || !canEdit || reserving || reserved) return;
+    setReserving(true);
+    setError('');
+    const id = categoryId;
+    operationKeys.current[id] ||= crypto.randomUUID();
+    try {
+      const result = await apiRequest(endpoints.numbers, {
+        method: 'POST',
+        body: {category_id: id, operation_key: operationKeys.current[id]},
+        idempotencyKey: operationKeys.current[id],
+      });
+      const code = result.part_code || result.returned_part_code;
+      if (!result.id || !code) throw new Error('取号响应缺少编号，请重新尝试。');
+      setReservations(current => ({...current, [id]: {id: result.id, part_code: code}}));
+    } catch (problem) { setError(errorText(problem)); }
+    finally { setReserving(false); }
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    if (saving || !canEdit) return;
+    setError('');
+    try {
+      if (!ready) throw new Error('请选择分类并完成取号，或填写 00001–99999 的五位流水号。');
+      const revision = revisionBody(form);
+      setSaving(true);
+      const result = await apiRequest(endpoints.parts, {
+        method: 'POST', idempotencyKey: saveKey.current,
+        body: {
+          part_code: partCode, category_id: categoryId, initial_revision: revision,
+          ...(numberMode === 'automatic' ? {number_request: reserved.id} : {}),
+        },
+      });
+      setCreated(result);
+      if (openPart) openPart(result);
+    } catch (problem) { setError(errorText(problem)); }
+    finally { setSaving(false); }
+  }
+
+  if (created) return <div className="page narrow">
+    <PageHead eyebrow="物料主数据" title="零件已创建" desc={`${created.part_code} 已保存为草稿。`} />
+    <div className="success-banner" role="status">可以继续查看版本、上传图纸和维护工程属性。</div>
+    <button className="btn primary" onClick={() => openPart ? openPart(created) : navigate('parts')}>
+      {openPart ? '打开零件详情' : '返回物料列表'}
+    </button>
+  </div>;
+
+  return <div className="page narrow">
+    <PageHead eyebrow="零件与版本 · 新建" title="新建零件"
+      desc="先选择分类和物料号，再保存初始工程版本。物料号由大类两位、小类两位和五位流水号组成。" />
+    <ErrorBox error={error} />
+    {!canEdit && <div className="error-banner">当前角色可浏览零件；新建零件需要工程师或管理员角色。</div>}
+    {loading ? <section className="card empty">正在加载分类与计量单位…</section> : <>
+      {(!selectable.length || !units.length) && <section className="card">
+        <div className="card-head"><div>
+          <h2>基础数据尚未就绪</h2>
+          <p className="muted">请管理员先维护可选的小类和计量单位，然后刷新此页面。</p>
+        </div><button className="btn secondary" onClick={() => setRetry(value => value + 1)}>重新加载</button></div>
+      </section>}
+      <form onSubmit={submit}>
+        <section className="card form-card">
+          <div className="card-head"><div><h2>分类与物料号</h2><span className="muted">物料号创建后保持不变。</span></div></div>
+          <div className="form-grid">
+            <Field label="大类 *">
+              <select required disabled={!canEdit || saving || reserving} value={major}
+                onChange={event => { setMajor(event.target.value); setCategoryId(''); setSerial(''); }}>
+                <option value="">请选择大类</option>
+                {majors.map(item => <option key={item.code} value={item.code}>{item.code} · {item.name}</option>)}
+              </select>
+            </Field>
+            <Field label="小类 *">
+              <select required disabled={!major || !canEdit || saving || reserving} value={categoryId}
+                onChange={event => { setCategoryId(event.target.value); setSerial(''); }}>
+                <option value="">请选择小类</option>
+                {minors.map(item => <option key={item.id} value={item.id}>{item.minor_code} · {item.name}</option>)}
+              </select>
+            </Field>
+            <Field label="编号方式">
+              <select disabled={!canEdit || saving || reserving} value={numberMode}
+                onChange={event => setNumberMode(event.target.value)}>
+                <option value="automatic">系统取号</option><option value="manual">手动录入流水号</option>
+              </select>
+            </Field>
+            <Field label={numberMode === 'automatic' ? '系统取号' : '五位流水号 *'}>
+              {numberMode === 'automatic' ? <button type="button" className="btn secondary"
+                disabled={!category || !canEdit || saving || reserving || Boolean(reserved)} onClick={reserveNumber}>
+                {reserving ? '正在取号…' : reserved ? '编号已预留' : '申请可用物料号'}
+              </button> : <input required inputMode="numeric" maxLength={5} pattern="[0-9]{5}"
+                disabled={!canEdit || saving} value={serial} placeholder="00001–99999"
+                onChange={event => setSerial(event.target.value.replace(/\D/g, ''))} />}
+            </Field>
+            <Field label="物料号" wide>
+              <div className="code-preview mono" aria-live="polite">{partCode || '选择小类后申请物料号'}</div>
+              {numberMode === 'automatic' && reserved &&
+                <small className="muted">此编号已预留，保存时自动关联取号记录。</small>}
+            </Field>
+          </div>
+          {category?.description && <p className="muted">分类说明：{category.description}</p>}
+        </section>
+        <section className="card form-card">
+          <div className="card-head"><div><h2>初始工程版本</h2><span className="muted">初始版本状态为草稿，保存后可提交审核。</span></div></div>
+          <RevisionFields form={form} onChange={setForm} units={units} disabled={!canEdit || saving} />
+        </section>
+        <section className="card form-card">
+          <div className="card-head"><div><h2>图纸与附件</h2>
+            <p className="muted">保存后进入零件详情，在对应版本下上传图纸。文件直传 MinIO，单个文件最大 5 GiB。</p>
+          </div></div>
+          <div className="form-actions">
+            <button type="button" className="btn ghost" disabled={saving} onClick={() => navigate('parts')}>取消</button>
+            <button className="btn primary" disabled={!ready || !canEdit || !units.length || saving || reserving}>
+              {saving ? '正在保存…' : '保存并打开详情'}
+            </button>
+          </div>
+        </section>
+      </form>
+    </>}
+  </div>;
+}
