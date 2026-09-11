@@ -4,7 +4,7 @@ export function PartsPage({navigate,openPart,reviewOnly=false}){const [rows,setR
 export function WorkbenchPage({navigate,openPart,user}){
   const [parts,setParts]=useState([]),[boms,setBoms]=useState([]),[activity,setActivity]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(null);
   useEffect(()=>{let alive=true;
-    const canAudit=['admin','reviewer','publisher'].includes(user?.role);
+    const canAudit=['admin','reviewer','publisher','auditor','sysadmin'].includes(user?.role);
     const requests=[apiRequest(endpoints.parts),apiRequest(endpoints.boms),canAudit?apiRequest(`${endpoints.audit}?limit=6`):Promise.resolve([])];
     Promise.allSettled(requests).then(([p,b,a])=>{
       if(!alive)return;

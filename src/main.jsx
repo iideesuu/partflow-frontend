@@ -8,7 +8,7 @@ import {PartDetailPage} from './part-detail.jsx';
 import {AuditPage, AdminPage, JobsPage, BomsPage} from './management.jsx';
 import './styles.css';
 
-const roleLabels = {viewer:'查看者',engineer:'工程师',reviewer:'审核员',publisher:'发布员',admin:'管理员'};
+const roleLabels = {viewer:'查看者',engineer:'工程师',reviewer:'审核员',publisher:'发布员',auditor:'审计员',sysadmin:'系统管理员',admin:'管理员'};
 const routeValue = () => location.hash.slice(1) || 'workbench';
 function Login({onLogin}) {
   const [username,setUsername] = useState(''), [password,setPassword] = useState('');
@@ -46,8 +46,9 @@ function App() {
   const openPart = part => navigate('parts/'+part.id+(part.selected_revision_id?'?revision='+part.selected_revision_id:''));
   if (checking) return <div className="loading-screen">加载 PartFlow…</div>;
   if (!user) return <><ErrorBox error={error}/><Login onLogin={setUser}/></>;
-  const role=user.role||'viewer', page=route.split('?')[0], isAdmin=role==='admin';
-  const auditAllowed=['admin','reviewer','publisher'].includes(role);
+  const role=user.role, page=route.split('?')[0], isAdmin=role==='admin'||role==='sysadmin';
+  if (!role) return <NoRolePage user={user} onLogout={async()=>{try{await apiRequest('/auth/logout',{method:'POST',body:{}});}finally{setUser(null);}}}/>;
+  const auditAllowed=['admin','reviewer','publisher','auditor','sysadmin'].includes(role);
   const nav=[['workbench','工作台','⌂'],['parts','物料与零件','▦'],['boms','BOM 管理','⌘'],['jobs','导入导出','↥'],['approvals','审核与发布','✓']];
   let content;
   if(page==='workbench') content=<WorkbenchPage user={user} navigate={navigate} openPart={openPart}/>;
@@ -81,3 +82,12 @@ function App() {
 }
 createRoot(document.getElementById('root')).render(<App/>);
 
+function NoRolePage({user,onLogout}) {
+  return <main className="login-page"><section className="card login-card">
+    <div className="brand center"><div className="brand-mark">P</div><div><b>PartFlow PLM</b><span>PRODUCT LIFECYCLE MANAGEMENT</span></div></div>
+    <h1>等待分配 PLM 角色</h1>
+    <p className="muted">LDAP 登录已成功（{user.display_name||user.username}），但当前账号尚未分配本地业务角色。</p>
+    <p className="muted">请联系 PLM 系统管理员在“管理中心 → 用户与角色”中分配角色。分配完成后重新登录即可生效。</p>
+    <button className="btn secondary full" onClick={onLogout}>退出登录</button>
+  </section></main>;
+}
