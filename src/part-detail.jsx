@@ -1,16 +1,17 @@
 import React,{useEffect,useState} from 'react';
 import {apiRequest} from './api.js';
-import {Badge,ErrorBox,PageHead} from './ui.jsx';
+import {Badge,ErrorBox,PageHead,uploadAttachment} from './ui.jsx';
 
 const arr=x=>Array.isArray(x?.results)?x.results:(Array.isArray(x)?x:[]);
 const dt=x=>x?new Date(x).toLocaleString():'—';
 
-export function PartDetailPage({partId,navigate}){
-  const [part,setPart]=useState(null),[where,setWhere]=useState([]),[events,setEvents]=useState([]),[tab,setTab]=useState('overview'),[error,setError]=useState(null),[busy,setBusy]=useState(false);
+export function PartDetailPage({partId,navigate,user}){
+  const [part,setPart]=useState(null),[where,setWhere]=useState([]),[events,setEvents]=useState([]),[tab,setTab]=useState('overview'),[error,setError]=useState(null),[busy,setBusy]=useState(false),[attachment,setAttachment]=useState(null),[uploadProgress,setUploadProgress]=useState(0),[uploading,setUploading]=useState(false);
   const load=async()=>{setError(null);try{const [p,w,t]=await Promise.all([apiRequest(`/parts/${partId}`),apiRequest(`/parts/${partId}/where-used`),apiRequest(`/parts/${partId}/timeline`)]);setPart(p);setWhere(arr(w));setEvents(arr(t));}catch(e){setError(e)}};
   useEffect(()=>{void load()},[partId]);
   const revs=part?.revisions||[], latest=revs[revs.length-1];
-  const transition=async state=>{if(!latest)return;setBusy(true);try{await apiRequest(`/parts/${partId}/revisions/${latest.id}/transition`,{method:'POST',body:{state}});await load()}catch(e){setError(e)}finally{setBusy(false)}};
+  const transition=async state=>{if(!latest)return;setBusy(true);try{await apiRequest(`/parts/${partId}/revisions/${latest.id}/transition`,{method:'POST',body:{state},rowVersion:latest.row_version,idempotencyKey:crypto.randomUUID()});await load()}catch(e){setError(e)}finally{setBusy(false)}};
+  const attach=async()=>{if(!attachment||!latest)return;setUploading(true);setError(null);try{const session=await uploadAttachment(attachment,setUploadProgress,'part_attachment');await apiRequest(`/parts/${partId}/attachments`,{method:'POST',body:{revision:latest.id,upload_session:session.id},idempotencyKey:crypto.randomUUID()});setAttachment(null);await load()}catch(e){setError(e)}finally{setUploading(false)}};
   if(!part&&!error)return <div className="page"><div className="empty-panel card">加载中…</div></div>;
   return <div className="page">
     <PageHead eyebrow="物料主数据 · 详情" title={part?.part_code||'物料详情'} desc={latest?.name||'—'}/>
@@ -21,6 +22,6 @@ export function PartDetailPage({partId,navigate}){
     {tab==='revisions'&&<section className="card"><table><thead><tr><th>Revision</th><th>状态</th><th>生命周期</th><th>附件数</th><th>创建时间</th></tr></thead><tbody>{revs.map(r=><tr key={r.id}><td className="mono strong">{r.revision}</td><td><Badge tone={r.revision_state==='released'?'green':'blue'}>{r.revision_state}</Badge></td><td>{r.business_lifecycle||'—'}</td><td>{r.attachment_count||0}</td><td>{dt(r.created_at)}</td></tr>)}</tbody></table></section>}
     {tab==='where'&&<section className="card"><table><thead><tr><th>BOM</th><th>Revision</th><th>行号</th><th>数量</th><th>位号</th></tr></thead><tbody>{where.map((r,i)=><tr key={r.id||i}><td>{r.bom_code||'—'}</td><td>{r.bom_revision||'—'}</td><td>{r.line_no||'—'}</td><td>{r.quantity||'—'}</td><td>{r.position||'—'}</td></tr>)}{!where.length&&<tr><td colSpan="5" className="empty">暂无上层 BOM 引用</td></tr>}</tbody></table></section>}
     {tab==='timeline'&&<section className="card timeline">{events.map((e,i)=><div className="timeline-item" key={e.id||i}><b>{e.action||'操作'}</b><span>{e.actor||'系统'} · {dt(e.created_at)}</span><p>{e.details?JSON.stringify(e.details):''}</p></div>)}{!events.length&&<div className="empty">暂无审计事件</div>}</section>}
-    {tab==='attachments'&&<section className="card empty-panel"><h2>图纸与附件</h2><p>文件体通过 MinIO 预签名地址上传，不写入应用服务器。</p><button className="btn secondary" onClick={()=>navigate('jobs')}>前往文件中心</button></section>}
+    {tab==='attachments'&&<section className="card empty-panel"><h2>图纸与附件</h2><p>文件直传 MinIO 隔离桶，单文件协议上限 5 GiB；扫描通过后才能绑定。</p><div className="form-actions"><input type="file" onChange={e=>setAttachment(e.target.files?.[0]||null)} disabled={uploading||latest?.revision_state!=='draft'}/><button className="btn primary" disabled={!attachment||uploading||latest?.revision_state!=='draft'} onClick={()=>{void attach()}}>{uploading?`上传 ${uploadProgress}%`:'上传并绑定'}</button></div><button className="btn secondary" onClick={()=>navigate('jobs')}>前往文件中心</button></section>}
   </div>;
 }

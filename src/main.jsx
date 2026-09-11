@@ -63,7 +63,7 @@ function App() {
   async function logout(){try{await apiRequest('/auth/logout',{method:'POST',body:{}});setUser(null);}catch(error){setError(error);}}
   return <div className="app">
     <aside className={open?'open':''}><div className="brand"><div className="brand-mark">P</div><div><b>PartFlow</b><span>PLM PLATFORM</span></div></div>
-      <div className="tenant"><span className="tenant-dot"/>研发中心 <small>V1.5</small></div>
+      <div className="tenant"><span className="tenant-dot"/>研发中心 <small>V1.6</small></div>
       <nav aria-label="主导航"><div className="nav-label">零件与产品结构</div>
         {nav.map(([id,label,icon])=><button key={id} className={page===id||(id==='parts'&&(page==='new'||page.startsWith('parts/')))?'active':''} onClick={()=>navigate(id)}><strong>{icon}</strong>{label}</button>)}
         {(isAdmin||auditAllowed)&&<div className="nav-label">管理与追溯</div>}

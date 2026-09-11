@@ -17,7 +17,7 @@ docker compose --env-file .env up -d --build frontend
 docker compose --profile storage-init run --rm minio-init
 ```
 
-脚本只接受带 `-lab` 后缀的桶，默认连接 `10.1.58.6:9000`；ROOT 凭据只存在容器环境，不会进入前端 bundle。生产环境请移除 `-lab` 并迁移到 `.env`/Secret。
+桶名称、MinIO 地址和凭据均由部署环境注入；ROOT 凭据只存在容器环境，不会进入前端 bundle。生产环境请使用 `.env`/Secret。
 
 ## 业务约束
 
