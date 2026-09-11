@@ -10,6 +10,9 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # .dockerignore excludes encrypted/protected source (for example *.src/*.enc).
 COPY . .
+# The host API client is protected/encrypted and cannot be parsed by Vite.
+# Materialize the reviewed plaintext client only inside the build image.
+COPY runtime_templates/src/api.js.tmpl /app/src/api.js
 # Protected host index.html is excluded; use the container-safe entrypoint.
 COPY index.safe.html /app/index.html
 RUN npm run build
