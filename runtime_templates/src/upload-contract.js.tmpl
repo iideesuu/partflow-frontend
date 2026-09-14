@@ -1,0 +1,7 @@
+// Upload contract helpers
+export const SESSION_REBUILD_STATES = new Set(['expired','cancelled']);
+export function sessionNeedsRecreate(s){return !s||SESSION_REBUILD_STATES.has(String(s.state||'').toLowerCase())}
+export function serverPartMap(receipt){const map=new Map();for(const p of (receipt?.parts||[])){const n=Number(p.part_number);if(!Number.isInteger(n)||n<1||!p.etag)throw Object.assign(new Error('invalid server part receipt'),{code:'UPLOAD_PART_RECEIPT_INVALID'});map.set(n,p)}return map}
+export function reconcileServerParts(receipt,total){const map=serverPartMap(receipt);for(const n of map.keys())if(n>total)throw Object.assign(new Error('out of range part'),{code:'UPLOAD_PART_RECEIPT_INVALID'});return map}
+export function finalizeJobPending(j){return !j||!['completed','failed','cancelled'].includes(String(j.status||j.execution_state||''))}
+export async function waitForFinalizeJob(fetchJob,id,{wait=async ms=>new Promise(r=>setTimeout(r,ms)),delay=500,maxAttempts=120}={}){for(let i=0;i<maxAttempts;i++){const j=await fetchJob(`/jobs/${id}`);const s=j?.status||j?.execution_state;if(s==='completed')return j;if(['failed','cancelled'].includes(s)){throw Object.assign(new Error(j.error||'upload finalize failed'),{code:'UPLOAD_FINALIZE_FAILED',job:j})}if(i<maxAttempts-1)await wait(delay)}throw Object.assign(new Error('upload finalize timeout'),{code:'UPLOAD_FINALIZE_TIMEOUT'})}

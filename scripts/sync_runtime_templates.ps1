@@ -1,16 +1,35 @@
-param([switch]$Check)
+param([switch]$Check, [switch]$Sync)
 $ErrorActionPreference = 'Stop'
+if ($Check -and $Sync) { throw 'Use either -Check or -Sync.' }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $root = Join-Path $repo 'runtime_templates'
+$utf8 = New-Object Text.UTF8Encoding($false, $true)
+$rg = (Get-Command rg -ErrorAction Stop).Source
 $drift = @()
 Get-ChildItem -LiteralPath $root -Recurse -File -Filter '*.tmpl' | ForEach-Object {
   $rel = $_.FullName.Substring($root.Length + 1)
-  $target = Join-Path $repo $rel.Substring(0, $rel.Length - 5)
-  if (-not (Test-Path -LiteralPath $target)) { return }
-  $prefix = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($target)[0..([Math]::Min(15,(Get-Item $target).Length-1))])
-  if ($prefix.StartsWith('%TSD-Header-###%')) { return }
-  $same = (Get-FileHash -LiteralPath $_.FullName).Hash -eq (Get-FileHash -LiteralPath $target).Hash
-  if (-not $same) { $drift += $rel; if (-not $Check) { Copy-Item -LiteralPath $_.FullName -Destination $target -Force } }
+  $relative = $rel.Substring(0, $rel.Length - 5)
+  $source = Join-Path $repo $relative
+  if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Missing local source: $relative" }
+  $bytes = [IO.File]::ReadAllBytes($source)
+  if ($bytes.Length -eq 0) { $text = '' }
+  else {
+    # rg is the authorized plaintext reader for transparent-encrypted files;
+    # inspect its result before looking at ciphertext bytes.
+    $lines = @(& $rg --text --no-heading --no-line-number --no-filename '^' -- $source)
+    $readerExit = $LASTEXITCODE
+    if ($readerExit -gt 1) {
+      $head = [Text.Encoding]::UTF8.GetString($bytes[0..([Math]::Min(63,$bytes.Length-1))])
+      if ($head.Contains('%TSD-Header-###%')) { throw "Unreadable encrypted source: $relative" }
+      throw "Source reader failed ($readerExit): $relative"
+    }
+    if ($readerExit -eq 1) { throw "Source reader returned no readable text: $relative" }
+    $text = (($lines -join "`n").TrimStart([char]0xFEFF))
+    if ($text.Length -and -not $text.EndsWith("`n")) { $text += "`n" }
+  }
+  $existing = [IO.File]::ReadAllText($_.FullName, $utf8).Replace("`r`n", "`n").Replace("`r", "`n")
+  $text = $text.Replace("`r`n", "`n").Replace("`r", "`n")
+  if ($existing.TrimEnd("`n") -cne $text.TrimEnd("`n")) { $drift += $relative; if ($Sync) { [IO.File]::WriteAllText($_.FullName, $text, $utf8) } }
 }
-if ($Check -and $drift.Count) { Write-Error ("Template drift detected:`n" + ($drift -join "`n")); exit 1 }
-Write-Output ($(if ($drift.Count) { "Synchronized $($drift.Count) files." } else { 'runtime_templates and local source are synchronized.' }))
+if ($drift.Count -and $Check) { throw "runtime_templates drift detected:`n$($drift -join "`n")" }
+Write-Output ($(if ($drift.Count) { "Synchronized $($drift.Count) files." } else { "runtime_templates match." }))
