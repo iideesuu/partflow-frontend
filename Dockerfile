@@ -10,16 +10,13 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # .dockerignore excludes encrypted/protected source (for example *.src/*.enc).
 COPY . .
-# The host API client is protected/encrypted and cannot be parsed by Vite.
-# Materialize the reviewed plaintext client only inside the build image.
+# Materialize reviewed plaintext sources only inside the build image.
 COPY runtime_templates/src/api.js.tmpl /app/src/api.js
-# UI modules follow the same reviewed-template flow. Keeping these copies
-# explicit makes the container build consume the canonical templates while
-# the protected working tree remains available for local code management.
 COPY runtime_templates/src/main.jsx.tmpl /app/src/main.jsx
 COPY runtime_templates/src/part-search.jsx.tmpl /app/src/part-search.jsx
 COPY runtime_templates/src/management.jsx.tmpl /app/src/management.jsx
 COPY runtime_templates/src/part-detail.jsx.tmpl /app/src/part-detail.jsx
+COPY runtime_templates/src/styles.css.tmpl /app/src/styles.css
 # Protected host index.html is excluded; use the container-safe entrypoint.
 COPY index.safe.html /app/index.html
 RUN npm run build

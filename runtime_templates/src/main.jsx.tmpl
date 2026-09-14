@@ -10,7 +10,7 @@ import './styles.css';
 
 const roleLabels = {viewer:'查看者',engineer:'工程师',reviewer:'审核员',publisher:'发布员',auditor:'审计员',sysadmin:'系统管理员',admin:'管理员'};
 const routeValue = () => location.hash.slice(1) || 'workbench';
-function Login({onLogin}) {
+function Login({onLogin, initialError}) {
   const [username,setUsername] = useState(''), [password,setPassword] = useState('');
   const [error,setError] = useState(null), [busy,setBusy] = useState(false);
   async function submit(event) {
@@ -20,7 +20,7 @@ function Login({onLogin}) {
   }
   return <main className="login-page"><form className="card login-card" onSubmit={submit}>
     <div className="brand center"><div className="brand-mark">P</div><div><b>PartFlow PLM</b><span>PRODUCT LIFECYCLE MANAGEMENT</span></div></div>
-    <h1>登录研发物料平台</h1><p className="muted">使用已授权的 LDAP 或本地账号</p><ErrorBox error={error}/>
+    <h1>登录研发物料平台</h1><p className="muted">使用已授权的 LDAP 或本地账号</p><ErrorBox error={error||initialError}/>
     <Field label="账号"><input required autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)}/></Field>
     <Field label="密码"><input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></Field>
     <button className="btn primary full" disabled={busy}>{busy?'登录中…':'登录'}</button>
@@ -45,7 +45,7 @@ function App() {
   const navigate = target => {setOpen(false); location.hash=target==='uploads'?'jobs':target; setRoute(routeValue());};
   const openPart = part => navigate('parts/'+part.id+(part.selected_revision_id?'?revision='+part.selected_revision_id:''));
   if (checking) return <div className="loading-screen">加载 PartFlow…</div>;
-  if (!user) return <><ErrorBox error={error}/><Login onLogin={setUser}/></>;
+  if (!user) return <Login onLogin={setUser} initialError={error}/>;
   const role=user.role, page=route.split('?')[0], isAdmin=role==='admin'||role==='sysadmin';
   if (!role) return <NoRolePage user={user} onLogout={async()=>{try{await apiRequest('/auth/logout',{method:'POST',body:{}});}finally{setUser(null);}}}/>;
   const auditAllowed=['admin','reviewer','publisher','auditor','sysadmin'].includes(role);
