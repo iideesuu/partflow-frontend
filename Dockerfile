@@ -19,6 +19,7 @@ COPY runtime_templates/src/api.js.tmpl /app/src/api.js
 COPY runtime_templates/src/main.jsx.tmpl /app/src/main.jsx
 COPY runtime_templates/src/part-search.jsx.tmpl /app/src/part-search.jsx
 COPY runtime_templates/src/management.jsx.tmpl /app/src/management.jsx
+COPY runtime_templates/src/part-detail.jsx.tmpl /app/src/part-detail.jsx
 # Protected host index.html is excluded; use the container-safe entrypoint.
 COPY index.safe.html /app/index.html
 RUN npm run build
