@@ -316,7 +316,7 @@ export function NewPartPage({navigate, user, openPart}) {
                 disabled={!canEdit || saving} value={serial} placeholder="00001–99999"
                 onChange={event => setSerial(event.target.value.replace(/\D/g, ''))} /></Field>}
             <Field label="物料号" wide>
-              <div className="code-preview mono" aria-live="polite">{partCode || '选择小类后申请物料号'}</div>
+              <div className="code-preview part-number mono" aria-live="polite">{partCode || '选择小类后申请物料号'}</div>
               {numberMode === 'external' && registered &&
                 <small className="muted">外部编号证据已登记，保存时自动关联取号记录。</small>}
             </Field>

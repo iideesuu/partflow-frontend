@@ -85,3 +85,11 @@ th { font-size: 12px; }
 @media (max-width:700px){.stat-value{font-size:28px}.code-preview{font-size:14px}}
 
 .revision-diff{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden}.diff-row{display:grid;grid-template-columns:120px minmax(0,1fr) 30px minmax(0,1fr);align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);font-size:14px}.diff-row:last-child{border-bottom:0}.diff-row>span{color:var(--muted)}.diff-row code{font-family:"SF Mono",ui-monospace,monospace;font-size:14px;white-space:pre-wrap;word-break:break-word}.diff-row.changed{background:#fff9ed}.diff-row.changed code:last-child{color:#9b5b16;font-weight:600}.toolbar.compact{gap:18px}.toolbar.compact .field{min-width:250px}
+
+/* Identifier typography: keep part and BOM numbers prominent at a glance */
+.part-number,.bom-number{font-family:"SF Mono",ui-monospace,Menlo,Monaco,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:.01em;font-size:17px;line-height:1.35;font-weight:650;color:#273c78}
+.page-head h1 .part-number{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.bom-detail .card-head h2.bom-number{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.bom-node-row .bom-number{font-size:16px;font-weight:650;color:#2f4375}
+.table-wrap td.part-number,.table-wrap td.bom-number{font-size:16px;font-weight:650}
+@media(max-width:700px){.part-number,.bom-number{font-size:16px}.page-head h1 .part-number,.bom-detail .card-head h2.bom-number{font-size:19px}.bom-node-row .bom-number{font-size:15px}}
