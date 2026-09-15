@@ -273,14 +273,14 @@ export function NewPartPage({navigate, user, openPart}) {
           <div className="form-grid">
             <Field label="大类 *">
               <select required disabled={!canEdit || saving || reserving} value={major}
-                onChange={event => { setMajor(event.target.value); setCategoryId(''); setSerial(''); }}>
+                onChange={event => { setMajor(event.target.value); setCategoryId(''); setSerial(''); setExternalRequestId(''); setExternalPartCode(''); }}>
                 <option value="">请选择大类</option>
                 {majors.map(item => <option key={item.code} value={item.code}>{item.code} · {item.name}</option>)}
               </select>
             </Field>
             <Field label="小类 *">
               <select required disabled={!major || !canEdit || saving || reserving} value={categoryId}
-                onChange={event => { setCategoryId(event.target.value); setSerial(''); }}>
+                onChange={event => { setCategoryId(event.target.value); setSerial(''); setExternalRequestId(''); setExternalPartCode(''); }}>
                 <option value="">请选择小类</option>
                 {minors.map(item => <option key={item.id} value={item.id}>{item.minor_code} · {item.name}</option>)}
               </select>
