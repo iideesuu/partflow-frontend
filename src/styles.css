@@ -74,3 +74,14 @@ th { font-size: 12px; }
 }
 
 .bom-detail .toolbar.compact{align-items:center;gap:18px}.bom-tree{border:1px solid var(--line,#e3e7ee);border-radius:12px;overflow:hidden}.tree-summary{display:flex;justify-content:space-between;gap:18px;padding:14px 18px;background:#f7f9fc}.bom-node-row{display:flex;align-items:center;gap:12px;padding:12px 18px 12px calc(18px + var(--bom-depth,0)*24px);border-top:1px solid var(--line,#e3e7ee);min-height:52px}.tree-toggle,.tree-spacer{width:24px;height:24px;flex:0 0 24px}.tree-toggle{border:1px solid #cbd3df;border-radius:6px;background:white;color:#243249;font-size:18px;line-height:1}.bom-node-meta{margin-left:auto;color:#596678;white-space:nowrap}.bom-node-row strong{white-space:nowrap}
+
+/* Apple style type scale: clear mixed-script text and stronger numeric hierarchy */
+:root{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;font-variant-numeric:tabular-nums lining-nums}
+.mono,.bom-code,.rev,.step{font-family:"SF Mono",ui-monospace,Menlo,Monaco,Consolas,monospace;font-variant-numeric:tabular-nums}
+.stat-value{font-size:32px;line-height:1.15;letter-spacing:-.6px;font-weight:700}
+.code-preview,.bom-node-row .mono,.structure-meta b{font-size:15px}
+.table-wrap td.mono,.table-wrap .mono{font-size:13px}
+.qty,.bom-node-meta{font-variant-numeric:tabular-nums;font-size:14px}
+@media (max-width:700px){.stat-value{font-size:28px}.code-preview{font-size:14px}}
+
+.revision-diff{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden}.diff-row{display:grid;grid-template-columns:120px minmax(0,1fr) 30px minmax(0,1fr);align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);font-size:14px}.diff-row:last-child{border-bottom:0}.diff-row>span{color:var(--muted)}.diff-row code{font-family:"SF Mono",ui-monospace,monospace;font-size:14px;white-space:pre-wrap;word-break:break-word}.diff-row.changed{background:#fff9ed}.diff-row.changed code:last-child{color:#9b5b16;font-weight:600}.toolbar.compact{gap:18px}.toolbar.compact .field{min-width:250px}
