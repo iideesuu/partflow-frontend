@@ -5,7 +5,8 @@ import {Field, ErrorBox} from './ui.jsx';
 import {WorkbenchPage, PartsPage} from './part-search.jsx';
 import {NewPartPage} from './part-editor.jsx';
 import {PartDetailPage} from './part-detail.jsx';
-import {AuditPage, AdminPage, JobsPage, BomsPage} from './management.jsx';
+import {AuditPage, AdminPage, JobsPage} from './management.jsx';
+import {BomsPage} from './bom-workspace.jsx';
 import './styles.css';
 
 const roleLabels = {viewer:'查看者',engineer:'工程师',reviewer:'审核员',publisher:'发布员',auditor:'审计员',sysadmin:'系统管理员',admin:'管理员'};

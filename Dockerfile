@@ -16,6 +16,8 @@ COPY runtime_templates/src/main.jsx.tmpl /app/src/main.jsx
 COPY runtime_templates/src/part-search.jsx.tmpl /app/src/part-search.jsx
 COPY runtime_templates/src/part-editor.jsx.tmpl /app/src/part-editor.jsx
 COPY runtime_templates/src/management.jsx.tmpl /app/src/management.jsx
+COPY runtime_templates/src/bom-workspace.jsx.tmpl /app/src/bom-workspace.jsx
+COPY runtime_templates/src/bom-edit.js.tmpl /app/src/bom-edit.js
 COPY runtime_templates/src/part-detail.jsx.tmpl /app/src/part-detail.jsx
 COPY runtime_templates/src/styles.css.tmpl /app/src/styles.css
 COPY runtime_templates/src/ui.jsx.tmpl /app/src/ui.jsx
