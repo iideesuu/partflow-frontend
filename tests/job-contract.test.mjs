@@ -87,6 +87,8 @@ test('management UI exposes status/deadline and download contracts without expos
   assert.match(management, /runJobCreate\(`export:/);
   assert.match(management, /importRunning\.current/);
   assert.match(management, /exportRunning\.current/);
+  assert.match(management, /确认已失效，请点击重试/);
+  assert.match(management, /confirmation_error==='STALE_CONFIRMATION'/);
 });
 
 test('job creation coalesces duplicate clicks and reuses a key after an uncertain failure', async () => {
