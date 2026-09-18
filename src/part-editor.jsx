@@ -288,7 +288,7 @@ export function NewPartPage({navigate, user, openPart}) {
             <Field label="编号方式">
               <select disabled={!canEdit || saving || reserving} value={numberMode}
                 onChange={event => setNumberMode(event.target.value)}>
-                <option value="external">外部系统登记</option><option value="manual">手动录入流水号</option>
+                <option value="external">外部系统登记</option>
               </select>
             </Field>
             {numberMode === 'external' ? <>
@@ -312,9 +312,7 @@ export function NewPartPage({navigate, user, openPart}) {
                   {reserving ? '正在登记…' : registered ? '外部编号已登记' : '登记外部编号'}
                 </button>
               </Field>
-            </> : <Field label="五位流水号 *"><input required inputMode="numeric" maxLength={5} pattern="[0-9]{5}"
-                disabled={!canEdit || saving} value={serial} placeholder="00001–99999"
-                onChange={event => setSerial(event.target.value.replace(/\D/g, ''))} /></Field>}
+            </> : null}
             <Field label="物料号" wide>
               <div className="code-preview part-number mono" aria-live="polite">{partCode || '选择小类后申请物料号'}</div>
               {numberMode === 'external' && registered &&
